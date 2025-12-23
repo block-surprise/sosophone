@@ -3,65 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Arrow View | Stealth</title>
+    <title>Arrow View | Sync</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { 
-            margin: 0; background: #000; color: #fff; 
-            font-family: 'Segoe UI', Roboto, sans-serif; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            height: 100vh; overflow: hidden;
-        }
-
-        /* 接続前のセットアップ画面 */
-        #setup { 
-            position: fixed; inset: 0; background: #000; z-index: 100; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-        }
-        .input-group { margin-bottom: 30px; text-align: center; width: 80%; }
-        input { 
-            width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #00ffaa; 
-            background: #111; color: #fff; font-size: 1.2rem; text-align: center; outline: none;
-        }
-        
-        /* 矢印のデザイン（さらに洗練） */
-        #arrow {
-            width: 0; height: 0;
-            border-left: 35px solid transparent; border-right: 35px solid transparent;
-            border-bottom: 120px solid #00ffaa;
-            filter: drop-shadow(0 0 20px #00ffaa);
-            transition: transform 0.1s linear;
-            margin-bottom: 40px;
-        }
-
-        .hud { text-align: center; }
-        .distance { font-size: 4rem; font-weight: 900; color: #00ffaa; margin: 0; }
-        #status { font-size: 0.9rem; letter-spacing: 3px; color: #888; text-transform: uppercase; }
-        #my-id-display { font-size: 0.7rem; color: #444; margin-top: 20px; }
-
-        button { 
-            padding: 15px 50px; border-radius: 30px; border: none; 
-            background: #00ffaa; color: #000; font-weight: bold; 
-            font-size: 1.1rem; cursor: pointer; box-shadow: 0 0 20px rgba(0,255,170,0.4);
-        }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        #setup { position: fixed; inset: 0; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        input { padding: 15px; border-radius: 10px; border: 1px solid #00ffaa; background: #111; color: #fff; width: 80%; text-align: center; margin-bottom: 20px; }
+        #arrow { width: 0; height: 0; border-left: 30px solid transparent; border-right: 30px solid transparent; border-bottom: 100px solid #00ffaa; filter: drop-shadow(0 0 15px #00ffaa); transition: transform 0.1s linear; display:none; }
+        .distance { font-size: 3rem; font-weight: bold; color: #00ffaa; margin-top: 20px; }
+        button { padding: 15px 40px; border-radius: 30px; border: none; background: #00ffaa; color: #000; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="setup">
-        <h1 style="color:#00ffaa; letter-spacing:8px; margin-bottom:40px;">ARROW VIEW</h1>
-        <div class="input-group">
-            <input type="text" id="target-id" placeholder="相手のIDを入力">
-            <p id="my-id-display">IDを取得中...</p>
-        </div>
+        <h1 style="color:#00ffaa;">ARROW VIEW</h1>
+        <input type="text" id="target-id" placeholder="相手のIDを入力">
         <button id="start-btn">CONNECT</button>
+        <p id="my-id-display" style="margin-top:20px; font-size:0.8rem; color:#888;">ID取得中...</p>
     </div>
 
     <div id="arrow"></div>
-    <div class="hud">
-        <p id="status">SEARCHING...</p>
-        <p class="distance" id="dist-out">---m</p>
-    </div>
+    <div class="distance" id="dist-out">---m</div>
+    <div id="status" style="font-size:0.7rem; color:#00ffaa; margin-top:10px;">READY</div>
 
     <script>
         let peer, conn;
@@ -69,53 +33,68 @@
         let targetPos = null;
         let bearing = 0;
 
-        // PeerJSの初期化（ページ読み込み時にIDだけ先に取得）
         peer = new Peer();
         peer.on('open', (id) => {
             document.getElementById('my-id-display').innerText = "あなたのID: " + id;
         });
 
+        // 【重要】待機側（コンタクトを押してない方）が接続を受けた時の処理
         peer.on('connection', (c) => {
             conn = c;
+            initUI();
             setupConn();
-            document.getElementById('setup').style.display = "none";
         });
 
-        // 接続開始ボタン
         document.getElementById('start-btn').onclick = async () => {
             const tid = document.getElementById('target-id').value;
-            
-            // センサー許可 (iOS用)
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 await DeviceOrientationEvent.requestPermission();
             }
-
             if (tid) {
                 conn = peer.connect(tid);
+                initUI();
                 setupConn();
             }
-            document.getElementById('setup').style.display = "none";
-            startTracking();
         };
+
+        function initUI() {
+            document.getElementById('setup').style.display = "none";
+            document.getElementById('arrow').style.display = "block";
+            startTracking();
+        }
 
         function setupConn() {
             conn.on('open', () => {
-                document.getElementById('status').innerText = "LOCKED ON";
-                // 1秒ごとに自分の位置を相手に送信
-                setInterval(() => { if (conn.open) conn.send(myPos); }, 1000);
+                document.getElementById('status').innerText = "CONNECTED";
+                // 接続直後と、その後定期的にデータを送る
+                setInterval(() => {
+                    if (conn && conn.open && myPos.lat !== 0) {
+                        conn.send(myPos);
+                    }
+                }, 1000);
             });
+
             conn.on('data', (data) => {
                 targetPos = data;
                 updateCompass();
+            });
+            
+            conn.on('close', () => {
+                document.getElementById('status').innerText = "LOST CONNECTION";
             });
         }
 
         function startTracking() {
             navigator.geolocation.watchPosition((pos) => {
+                // 精度が悪い（500m以上誤差がある）データは無視する
+                if (pos.coords.accuracy > 500) return; 
+                
                 myPos.lat = pos.coords.latitude;
                 myPos.lng = pos.coords.longitude;
                 updateCompass();
-            }, null, { enableHighAccuracy: true });
+            }, (err) => {
+                console.error(err);
+            }, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
 
             window.addEventListener('deviceorientation', (e) => {
                 const heading = e.webkitCompassHeading || (360 - e.alpha);
@@ -130,10 +109,13 @@
             if (!targetPos || !myPos.lat) return;
             bearing = calculateBearing(myPos.lat, myPos.lng, targetPos.lat, targetPos.lng);
             const d = calculateDistance(myPos.lat, myPos.lng, targetPos.lat, targetPos.lng);
-            document.getElementById('dist-out').innerText = Math.floor(d) + "m";
+            
+            // 5m未満は「目の前」として0m表示にする（GPSの揺れ対策）
+            const displayDist = d < 5 ? 0 : Math.floor(d);
+            document.getElementById('dist-out').innerText = displayDist + "m";
+            document.getElementById('status').innerText = "TRACKING TARGET";
         }
 
-        // 方位・距離計算ロジック
         function calculateBearing(lat1, lng1, lat2, lng2) {
             const dL = (lng2 - lng1) * Math.PI / 180;
             const y = Math.sin(dL) * Math.cos(lat2 * Math.PI / 180);
