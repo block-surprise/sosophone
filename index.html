@@ -2,117 +2,124 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SOSO phone</title>
     <style>
         :root {
-            --ios-green: #4cd964;
-            --ios-red: #ff3b30;
-            --and-green: #00e676;
-            --and-red: #ff5252;
+            --ios-green: #4cd964; --ios-red: #ff3b30;
+            --and-blue: #7fcfff; --and-green: #00e676; --and-red: #ff5252;
         }
         body { margin: 0; background: #000; font-family: -apple-system, Roboto, sans-serif; color: white; overflow: hidden; }
-        
-        /* 設定画面 */
-        #setup { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; background: #111; }
-        .logo { font-size: 1.5rem; color: var(--ios-green); font-weight: bold; margin-bottom: 20px; }
-        input { width: 70%; background: #222; border: 1px solid #444; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
-        .mode-btn { padding: 10px 20px; border-radius: 20px; border: 1px solid #666; background: none; color: white; margin: 5px; }
-        .mode-btn.active { background: white; color: black; }
-        .start-btn { background: var(--ios-green); color: white; border: none; padding: 15px 40px; border-radius: 30px; font-weight: bold; margin-top: 20px; font-size: 1.2rem; }
 
-        /* --- iOS 着信画面（iPhone 15以降のイメージ） --- */
-        #ios-inc { display: none; height: 100vh; background: linear-gradient(to bottom, #4b4b4b, #000); text-align: center; padding-top: 80px; position: relative; }
-        .ios-caller { font-size: 2.2rem; font-weight: 500; }
-        .ios-sub { font-size: 1.1rem; opacity: 0.7; margin-top: 10px; }
-        .ios-btns { position: absolute; bottom: 60px; width: 100%; display: flex; justify-content: space-around; padding: 0 40px; box-sizing: border-box; }
-        .ios-btn-container { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 0.8rem; }
-        .ios-btn-circle { width: 75px; height: 75px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; border: none; cursor: pointer; }
+        /* 設定画面（ここはアプリ感があってもOK） */
+        #setup { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #111; padding: 20px; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--ios-green); margin-bottom: 20px; }
+        input, select { width: 80%; background: #222; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-size: 1rem; }
+        .start-btn { background: var(--ios-green); color: white; border: none; padding: 15px 50px; border-radius: 30px; font-weight: bold; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
 
-        /* --- Android 着信画面（Material Youイメージ） --- */
-        #and-inc { display: none; height: 100vh; background: #1a1c1e; text-align: center; }
-        .and-caller { font-size: 2rem; margin-top: 100px; }
-        .and-sub { font-size: 0.9rem; color: #a1c9ff; margin-top: 8px; }
-        .and-btns { position: absolute; bottom: 80px; width: 100%; display: flex; justify-content: space-around; align-items: center; }
-        .and-btn-circle { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; border: none; }
+        /* --- iOS 17以降 徹底再現 --- */
+        #ios-inc { display: none; height: 100vh; background: linear-gradient(to bottom, #5a5a5a, #000); text-align: center; }
+        .ios-top { padding-top: 100px; }
+        .ios-name { font-size: 2.2rem; font-weight: 500; letter-spacing: -0.5px; }
+        .ios-sub { font-size: 1.1rem; opacity: 0.7; margin-top: 8px; }
+        .ios-footer { position: absolute; bottom: 60px; width: 100%; display: flex; justify-content: space-around; padding: 0 40px; box-sizing: border-box; }
+        .ios-btn-box { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 0.8rem; }
+        .ios-circle { width: 75px; height: 75px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; border: none; }
 
-        /* 通話中表示 */
-        #calling-ui { display: none; height: 100vh; background: #000; flex-direction: column; align-items: center; padding-top: 80px; }
-        .hangup { width: 70px; height: 70px; border-radius: 50%; background: var(--ios-red); border: none; color: white; font-size: 2rem; transform: rotate(135deg); margin-top: 200px; }
+        /* --- Android (Pixel/Pure Android) 徹底再現 --- */
+        #and-inc { display: none; height: 100vh; background: #1a1c1e; }
+        .and-top { height: 40%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .and-name { font-size: 2rem; font-weight: 400; }
+        .and-sub { font-size: 0.9rem; color: var(--and-blue); margin-top: 5px; }
+        .and-footer { position: absolute; bottom: 80px; width: 100%; display: flex; justify-content: space-around; }
+        .and-circle { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; border: none; }
+
+        /* 通話中（共通） */
+        #calling-ui { display: none; height: 100vh; background: #000; flex-direction: column; align-items: center; padding-top: 100px; }
+        .hangup { width: 72px; height: 72px; border-radius: 50%; background: var(--ios-red); border: none; color: white; font-size: 2rem; transform: rotate(135deg); margin-top: auto; margin-bottom: 80px; }
     </style>
 </head>
 <body>
 
     <div id="setup">
-        <div class="logo">SOSO phone v2</div>
-        <input type="text" id="name-in" value="お母さん">
-        <div>
-            <button class="mode-btn active" id="btn-ios" onclick="setMode('ios')">iPhone</button>
-            <button class="mode-btn" id="btn-and" onclick="setMode('and')">Android</button>
-        </div>
-        <button class="start-btn" onclick="execute()">10秒後に脱出開始</button>
-        <p style="font-size: 0.6rem; margin-top: 10px; opacity: 0.5;">※このボタンを押した時点で音の再生が許可されます</p>
+        <div class="logo">SOSO phone ULTRA</div>
+        <input type="text" id="name-in" value="お母さん" placeholder="発信者の名前">
+        <select id="os-select">
+            <option value="ios">iPhone (iOS 17風)</option>
+            <option value="and">Android (Pixel風)</option>
+        </select>
+        <select id="sound-select">
+            <option value="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg">iPhone Reflection風</option>
+            <option value="https://actions.google.com/sounds/v1/alarms/phone_ringing_low.ogg">Android Pixel風</option>
+            <option value="https://actions.google.com/sounds/v1/alarms/mechanical_clock_ring.ogg">レトロな電話音</option>
+        </select>
+        <button class="start-btn" onclick="execute()">10秒後に「本物」が来る</button>
     </div>
 
     <div id="ios-inc">
-        <div class="ios-caller name-disp">お母さん</div>
-        <div class="ios-sub">モバイル 着信中...</div>
-        <div class="ios-btns">
-            <div class="ios-btn-container" onclick="reset()">
-                <div class="ios-btn-circle" style="background:var(--ios-red); transform:rotate(135deg);">📞</div>
-                拒否
+        <div class="ios-top">
+            <div class="ios-name name-disp">お母さん</div>
+            <div class="ios-sub">iPhone</div>
+        </div>
+        <div class="ios-footer">
+            <div class="ios-btn-box" onclick="reset()">
+                <div class="ios-circle" style="background:var(--ios-red); transform:rotate(135deg);">📞</div>
+                <div style="margin-top:5px">拒否</div>
             </div>
-            <div class="ios-btn-container" onclick="goCalling()">
-                <div class="ios-btn-circle" style="background:var(--ios-green);">📞</div>
-                応答
+            <div class="ios-btn-box" onclick="goCalling()">
+                <div class="ios-circle" style="background:var(--ios-green);">📞</div>
+                <div style="margin-top:5px">応答</div>
             </div>
         </div>
     </div>
 
     <div id="and-inc">
-        <div class="and-caller name-disp">お母さん</div>
-        <div class="and-sub">着信中...</div>
-        <div class="and-btns">
-            <div class="and-btn-circle" style="background:var(--and-red); transform:rotate(135deg);" onclick="reset()">📞</div>
-            <div class="and-btn-circle" style="background:var(--and-green);" onclick="goCalling()">📞</div>
+        <div class="and-top">
+            <div class="and-name name-disp">お母さん</div>
+            <div class="and-sub">着信中 (Google)</div>
+        </div>
+        <div class="and-footer">
+            <div class="and-circle" style="background:var(--and-red); transform:rotate(135deg);" onclick="reset()">📞</div>
+            <div class="and-circle" style="background:var(--and-green);" onclick="goCalling()">📞</div>
         </div>
     </div>
 
     <div id="calling-ui">
-        <div class="name-disp" style="font-size:2.2rem;">お母さん</div>
-        <div id="clock" style="font-size:1.2rem; margin-top:10px;">00:00</div>
+        <div class="name-disp" style="font-size:2.2rem; font-weight:300;">お母さん</div>
+        <div id="clock" style="font-size:1.2rem; margin-top:10px; opacity:0.8;">00:00</div>
         <button class="hangup" onclick="reset()">📞</button>
     </div>
 
     <script>
-        let mode = 'ios';
-        // 着信音の読み込み（サンプル音源：iPhone風）
-        const ringtone = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'); 
-        ringtone.loop = true;
-
-        function setMode(m) {
-            mode = m;
-            document.getElementById('btn-ios').classList.toggle('active', m === 'ios');
-            document.getElementById('btn-and').classList.toggle('active', m === 'and');
-        }
-
+        let ringtone = new Audio();
+        
         function execute() {
+            // 音の設定
+            ringtone.src = document.getElementById('sound-select').value;
+            ringtone.loop = true;
+            
+            // 名前の反映
             const name = document.getElementById('name-in').value;
             document.querySelectorAll('.name-disp').forEach(el => el.innerText = name);
-            document.getElementById('setup').style.display = 'none';
             
-            // 10秒待機
+            const os = document.getElementById('os-select').value;
+            document.getElementById('setup').style.display = 'none';
+
+            // フルスクリーンのリクエスト（本物に見せる最大のコツ）
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen();
+            }
+
             setTimeout(() => {
-                document.getElementById(mode + '-inc').style.display = 'block';
-                ringtone.play().catch(e => console.log("再開ボタンを押してください"));
+                document.getElementById(os + '-inc').style.display = 'block';
+                ringtone.play();
                 if (navigator.vibrate) navigator.vibrate([1000, 500, 1000, 500, 1000]);
             }, 10000);
         }
 
         function goCalling() {
             ringtone.pause();
-            document.getElementById('ios-inc').style.display = 'none';
-            document.getElementById('and-inc').style.display = 'none';
+            document.querySelectorAll('[id$="-inc"]').forEach(el => el.style.display = 'none');
             document.getElementById('calling-ui').style.display = 'flex';
             let sec = 0;
             setInterval(() => {
@@ -125,6 +132,7 @@
 
         function reset() { 
             ringtone.pause();
+            if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
             location.reload(); 
         }
     </script>
