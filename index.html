@@ -11,19 +11,26 @@
             --text: #ffffff;
             --shadow: 0 2px 8px rgba(0,0,0,0.9);
         }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; background: #000; overflow-y: auto; }
+        /* 背景が黒くなるのを防ぐため、body自体に初期背景を直接書き込み */
+        body, html { 
+            margin: 0; padding: 0; min-height: 100%; 
+            font-family: sans-serif; 
+            background-color: #333; /* 真っ黒ではなく濃いグレーを予備に */
+            background-image: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80');
+            background-repeat: no-repeat; 
+            background-position: center center;
+            background-size: cover;
+            background-attachment: fixed;
+        }
 
-        /* 背景画像（膜なし・最優先） */
-        #bg-image {
+        /* 念のための別レイヤー（何重にも重ねる） */
+        #bg-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-image: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b');
-            background-repeat: no-repeat; background-position: center center;
-            background-size: cover; z-index: -2;
+            z-index: -2; background-size: cover; background-position: center;
         }
 
         .container { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 0; box-sizing: border-box; }
 
-        /* カレンダーカード */
         .calendar-card {
             background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             border-radius: 25px; padding: 20px; width: 90%; max-width: 380px;
@@ -32,7 +39,7 @@
         }
 
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .nav-btn { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 5px 15px; }
+        .nav-btn { background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer; padding: 5px 15px; }
 
         .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
         .day-label { font-size: 0.7rem; font-weight: bold; color: var(--accent); padding: 5px 0; }
@@ -44,99 +51,93 @@
         .day.today { background: var(--accent); color: #000; font-weight: bold; text-shadow: none; }
         .day.other-month { opacity: 0.3; pointer-events: none; }
         
-        /* 予定のライン表示 */
         .event-line {
             width: 70%; height: 3px; background: var(--accent);
             position: absolute; bottom: 4px; border-radius: 2px;
             box-shadow: 0 0 5px rgba(0,255,170,0.8);
         }
-        .today .event-line { background: #000; box-shadow: none; }
 
-        /* 予定一覧表示エリア */
         .event-list-card {
             margin-top: 20px; width: 90%; max-width: 380px;
-            background: rgba(0, 0, 0, 0.6); border-radius: 20px; padding: 15px;
+            background: rgba(0, 0, 0, 0.5); border-radius: 20px; padding: 15px;
             color: white; border: 1px solid rgba(255,255,255,0.1);
         }
-        .event-list-card h4 { margin: 0 0 10px 0; border-bottom: 1px solid var(--accent); color: var(--accent); padding-bottom: 5px; }
+        .event-list-card h4 { margin: 0 0 10px 0; border-bottom: 1px solid var(--accent); color: var(--accent); }
         .event-item { font-size: 0.85rem; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .event-item span { color: var(--accent); margin-right: 10px; font-weight: bold; }
 
-        /* モーダル */
         #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: #1a1a1a; padding: 20px; border-radius: 20px; width: 85%; max-width: 300px; border: 1px solid var(--accent); }
+        .modal-content { background: #1a1a1a; padding: 20px; border-radius: 20px; width: 85%; max-width: 300px; border: 1px solid var(--accent); color: white; }
         input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: none; background: #333; color: white; box-sizing: border-box; }
-        .modal-btns { display: flex; gap: 10px; }
-        .btn { flex: 1; padding: 10px; border-radius: 20px; border: none; font-weight: bold; }
-        .save-btn { background: var(--accent); }
+        .btn { flex: 1; padding: 10px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; }
 
         .footer { margin-top: 20px; display: flex; gap: 10px; }
-        .tool-btn { font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 20px; cursor: pointer; color: white; border: none; }
+        .tool-btn { font-size: 0.75rem; background: rgba(0,0,0,0.6); border: 1px solid var(--accent); padding: 10px 20px; border-radius: 25px; cursor: pointer; color: white; }
     </style>
 </head>
 <body>
 
-    <div id="bg-image"></div>
+    <div id="bg-layer"></div>
 
     <div class="container">
         <div class="calendar-card">
             <div class="header">
                 <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
-                <h2 id="month-display">2025.12</h2>
+                <h2 id="month-display">----.--</h2>
                 <button class="nav-btn" onclick="changeMonth(1)">›</button>
             </div>
             <div class="grid" id="calendar-grid"></div>
         </div>
 
         <div class="event-list-card">
-            <h4>📅 今月の予定一覧</h4>
-            <div id="event-list-items">予定はありません</div>
+            <h4>📅 今月の予定</h4>
+            <div id="event-list-items">読み込み中...</div>
         </div>
 
         <div class="footer">
-            <label class="tool-btn">📷 写真変更<input type="file" id="bg-upload" style="display:none" accept="image/*"></label>
-            <button class="tool-btn" onclick="resetBg()">🔄 リセット</button>
+            <label class="tool-btn">📷 写真を変更<input type="file" id="bg-upload" style="display:none" accept="image/*"></label>
+            <button class="tool-btn" onclick="resetBg()">🔄 初期化</button>
         </div>
     </div>
 
     <div id="modal">
         <div class="modal-content">
-            <h3 style="color:var(--accent); text-align:center; margin-top:0">予定登録</h3>
+            <h3 style="text-align:center">予定を登録</h3>
             <input type="text" id="event-input" placeholder="何をする？">
             <input type="date" id="start-date">
             <input type="date" id="end-date">
-            <div class="modal-btns">
+            <div style="display:flex; gap:10px">
                 <button class="btn" style="background:#444; color:white" onclick="closeModal()">戻る</button>
-                <button class="btn save-btn" onclick="saveEvent()">保存</button>
+                <button class="btn" style="background:var(--accent); color:black" onclick="saveEvent()">保存</button>
             </div>
         </div>
     </div>
 
     <script>
+        const DEFAULT_URL = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80';
         let currentViewDate = new Date();
-        let events = JSON.parse(localStorage.getItem('cal-v4-events') || '{}');
-        const DEFAULT_BG = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b';
+        let events = JSON.parse(localStorage.getItem('cal-final-events') || '{}');
+
+        function applyBg(url) {
+            document.body.style.backgroundImage = `url('${url}')`;
+            document.getElementById('bg-layer').style.backgroundImage = `url('${url}')`;
+        }
 
         function render() {
             const grid = document.getElementById('calendar-grid');
             const listItems = document.getElementById('event-list-items');
-            grid.innerHTML = '';
-            listItems.innerHTML = '';
+            grid.innerHTML = ''; listItems.innerHTML = '';
             
             const year = currentViewDate.getFullYear();
             const month = currentViewDate.getMonth();
             document.getElementById('month-display').innerText = `${year}.${String(month + 1).padStart(2, '0')}`;
 
             ['日','月','火','水','木','金','土'].forEach(d => {
-                const div = document.createElement('div');
-                div.className = 'day-label'; div.innerText = d; grid.appendChild(div);
+                const div = document.createElement('div'); div.className = 'day-label'; div.innerText = d; grid.appendChild(div);
             });
 
             const firstDay = new Date(year, month, 1).getDay();
             const lastDate = new Date(year, month + 1, 0).getDate();
-            for (let i = 0; i < firstDay; i++) {
-                const div = document.createElement('div'); div.className = 'day other-month'; grid.appendChild(div);
-            }
+            for (let i = 0; i < firstDay; i++) { grid.appendChild(document.createElement('div')); }
 
             const today = new Date();
             let monthEvents = [];
@@ -144,76 +145,63 @@
             for (let i = 1; i <= lastDate; i++) {
                 const div = document.createElement('div'); div.className = 'day';
                 const dateKey = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                
                 if (i === today.getDate() && month === today.getMonth() && year === today.getFullYear()) div.classList.add('today');
                 div.innerText = i;
-
                 if (events[dateKey]) {
                     const line = document.createElement('div'); line.className = 'event-line';
                     div.appendChild(line);
-                    monthEvents.push({date: i, text: events[dateKey]});
+                    monthEvents.push({day: i, text: events[dateKey]});
                 }
                 div.onclick = () => openModal(dateKey);
                 grid.appendChild(div);
             }
 
-            // 一覧表示の更新
             if (monthEvents.length > 0) {
-                monthEvents.sort((a,b) => a.date - b.date).forEach(ev => {
-                    const item = document.createElement('div');
-                    item.className = 'event-item';
-                    item.innerHTML = `<span>${ev.date}日</span> ${ev.text}`;
-                    listItems.appendChild(item);
+                monthEvents.forEach(e => {
+                    listItems.innerHTML += `<div class="event-item"><b style="color:var(--accent)">${e.day}日:</b> ${e.text}</div>`;
                 });
-            } else {
-                listItems.innerText = '予定はありません';
-            }
+            } else { listItems.innerText = '予定なし'; }
         }
 
-        function changeMonth(diff) { currentViewDate.setMonth(currentViewDate.getMonth() + diff); render(); }
-        function openModal(dateKey) {
-            document.getElementById('start-date').value = dateKey;
-            document.getElementById('end-date').value = dateKey;
-            document.getElementById('event-input').value = events[dateKey] || '';
-            document.getElementById('modal').style.display = 'flex';
+        function changeMonth(n) { currentViewDate.setMonth(currentViewDate.getMonth() + n); render(); }
+        function openModal(k) { 
+            document.getElementById('start-date').value = k;
+            document.getElementById('end-date').value = k;
+            document.getElementById('event-input').value = events[k] || '';
+            document.getElementById('modal').style.display = 'flex'; 
         }
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
+        
         function saveEvent() {
             const s = document.getElementById('start-date').value, e = document.getElementById('end-date').value, t = document.getElementById('event-input').value;
-            if(!s) return;
             let cur = new Date(s), end = new Date(e || s);
             while(cur <= end) {
                 const k = cur.toISOString().split('T')[0];
                 if(t.trim()==='') delete events[k]; else events[k] = t;
                 cur.setDate(cur.getDate()+1);
             }
-            localStorage.setItem('cal-v4-events', JSON.stringify(events));
+            localStorage.setItem('cal-final-events', JSON.stringify(events));
             closeModal(); render();
         }
 
-        // 背景変更の確実な反映
         document.getElementById('bg-upload').onchange = (e) => {
             const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const data = ev.target.result;
-                    document.getElementById('bg-image').style.backgroundImage = `url(${data})`;
-                    localStorage.setItem('cal-v4-bg', data);
-                };
-                reader.readAsDataURL(file);
-            }
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                applyBg(ev.target.result);
+                try { localStorage.setItem('cal-final-bg', ev.target.result); } catch(e) { alert("画像が大きすぎます！"); }
+            };
+            reader.readAsDataURL(file);
         };
 
         function resetBg() {
-            localStorage.removeItem('cal-v4-bg');
-            document.getElementById('bg-image').style.backgroundImage = `url(${DEFAULT_BG})`;
+            localStorage.removeItem('cal-final-bg');
+            applyBg(DEFAULT_URL);
         }
 
-        // 起動時に背景を適用
-        const savedBg = localStorage.getItem('cal-v4-bg');
-        if (savedBg) document.getElementById('bg-image').style.backgroundImage = `url(${savedBg})`;
-
+        // 初期実行
+        const saved = localStorage.getItem('cal-final-bg');
+        applyBg(saved || DEFAULT_URL);
         render();
     </script>
 </body>
