@@ -2,55 +2,65 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Arrow View</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Arrow View | Stealth</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
-        
-        /* カメラ映像を全画面に */
-        #video-bg {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; z-index: -1; opacity: 0.6;
+        body { 
+            margin: 0; background: #000; color: #fff; 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            height: 100vh; overflow: hidden;
         }
 
-        #setup { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        input { padding: 15px; border-radius: 10px; border: 1px solid #00ffaa; background: #222; color: #fff; width: 80%; max-width: 300px; text-align: center; font-size: 1.2rem; margin-bottom: 20px; }
+        /* 接続前のセットアップ画面 */
+        #setup { 
+            position: fixed; inset: 0; background: #000; z-index: 100; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        }
+        .input-group { margin-bottom: 30px; text-align: center; width: 80%; }
+        input { 
+            width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #00ffaa; 
+            background: #111; color: #fff; font-size: 1.2rem; text-align: center; outline: none;
+        }
         
-        /* 矢印（中央に配置） */
-        #ui-layer { position: relative; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+        /* 矢印のデザイン（さらに洗練） */
         #arrow {
             width: 0; height: 0;
-            border-left: 30px solid transparent; border-right: 30px solid transparent;
-            border-bottom: 100px solid #00ffaa;
+            border-left: 35px solid transparent; border-right: 35px solid transparent;
+            border-bottom: 120px solid #00ffaa;
             filter: drop-shadow(0 0 20px #00ffaa);
             transition: transform 0.1s linear;
+            margin-bottom: 40px;
         }
 
-        .hud { position: absolute; bottom: 50px; text-align: center; text-shadow: 0 0 10px #000; }
-        .distance { font-size: 3.5rem; font-weight: 900; color: #00ffaa; }
-        #status { font-size: 0.8rem; letter-spacing: 2px; }
+        .hud { text-align: center; }
+        .distance { font-size: 4rem; font-weight: 900; color: #00ffaa; margin: 0; }
+        #status { font-size: 0.9rem; letter-spacing: 3px; color: #888; text-transform: uppercase; }
+        #my-id-display { font-size: 0.7rem; color: #444; margin-top: 20px; }
 
-        button { pointer-events: auto; padding: 15px 40px; border-radius: 30px; border: none; background: #00ffaa; color: #000; font-weight: bold; font-size: 1rem; }
+        button { 
+            padding: 15px 50px; border-radius: 30px; border: none; 
+            background: #00ffaa; color: #000; font-weight: bold; 
+            font-size: 1.1rem; cursor: pointer; box-shadow: 0 0 20px rgba(0,255,170,0.4);
+        }
     </style>
 </head>
 <body>
 
-    <video id="video-bg" autoplay playsinline></video>
-
     <div id="setup">
-        <h1 style="color:#00ffaa; letter-spacing:5px;">ARROW VIEW</h1>
-        <input type="text" id="target-id" placeholder="相手のIDを入力">
-        <button onclick="init()">システム起動</button>
-        <p id="my-id-display" style="margin-top:20px; font-size:0.8rem;"></p>
+        <h1 style="color:#00ffaa; letter-spacing:8px; margin-bottom:40px;">ARROW VIEW</h1>
+        <div class="input-group">
+            <input type="text" id="target-id" placeholder="相手のIDを入力">
+            <p id="my-id-display">IDを取得中...</p>
+        </div>
+        <button id="start-btn">CONNECT</button>
     </div>
 
-    <div id="ui-layer">
-        <div id="arrow"></div>
-        <div class="hud">
-            <div id="status">SCANNING...</div>
-            <div class="distance" id="dist-out">---m</div>
-        </div>
+    <div id="arrow"></div>
+    <div class="hud">
+        <p id="status">SEARCHING...</p>
+        <p class="distance" id="dist-out">---m</p>
     </div>
 
     <script>
@@ -59,46 +69,39 @@
         let targetPos = null;
         let bearing = 0;
 
-        // 初期化：カメラ・位置情報・PeerJS
-        async function init() {
-            // カメラ起動
-            const video = document.getElementById('video-bg');
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-                video.srcObject = stream;
-            } catch (e) { console.log("Camera error:", e); }
+        // PeerJSの初期化（ページ読み込み時にIDだけ先に取得）
+        peer = new Peer();
+        peer.on('open', (id) => {
+            document.getElementById('my-id-display').innerText = "あなたのID: " + id;
+        });
 
-            // センサー許可 (iOS)
+        peer.on('connection', (c) => {
+            conn = c;
+            setupConn();
+            document.getElementById('setup').style.display = "none";
+        });
+
+        // 接続開始ボタン
+        document.getElementById('start-btn').onclick = async () => {
+            const tid = document.getElementById('target-id').value;
+            
+            // センサー許可 (iOS用)
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 await DeviceOrientationEvent.requestPermission();
             }
 
-            // PeerJS
-            peer = new Peer();
-            peer.on('open', (id) => {
-                document.getElementById('my-id-display').innerText = "あなたのID: " + id;
-                const tid = document.getElementById('target-id').value;
-                if (tid) {
-                    conn = peer.connect(tid);
-                    setupConn();
-                }
-                document.getElementById('setup').style.background = "transparent";
-                document.getElementById('setup').querySelector('h1').style.display = "none";
-                document.getElementById('setup').querySelector('input').style.display = "none";
-                document.getElementById('setup').querySelector('button').style.display = "none";
-            });
-
-            peer.on('connection', (c) => {
-                conn = c;
+            if (tid) {
+                conn = peer.connect(tid);
                 setupConn();
-            });
-
+            }
+            document.getElementById('setup').style.display = "none";
             startTracking();
-        }
+        };
 
         function setupConn() {
             conn.on('open', () => {
-                document.getElementById('status').innerText = "TARGET LOCKED";
+                document.getElementById('status').innerText = "LOCKED ON";
+                // 1秒ごとに自分の位置を相手に送信
                 setInterval(() => { if (conn.open) conn.send(myPos); }, 1000);
             });
             conn.on('data', (data) => {
@@ -130,6 +133,7 @@
             document.getElementById('dist-out').innerText = Math.floor(d) + "m";
         }
 
+        // 方位・距離計算ロジック
         function calculateBearing(lat1, lng1, lat2, lng2) {
             const dL = (lng2 - lng1) * Math.PI / 180;
             const y = Math.sin(dL) * Math.cos(lat2 * Math.PI / 180);
